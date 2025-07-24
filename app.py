@@ -113,7 +113,7 @@ uploaded_file = st.file_uploader(
 )
 
 # --- GITHUB SUPPORT ---
-github_url = st.text_input("Or enter a GitHub **raw** file URL (e.g., https://raw.githubusercontent.com/...)")
+github_url = st.text_input("https://github.com/swapnil-mayavanshi/pdf_edit/blob/44aa6125bf5fa115768f3a13cdef7fea59bc61aa/Samsung_Company_Overview.pdf")
 use_github_file = github_url.strip() != ""
 github_filename = ""
 github_temp_path = ""
