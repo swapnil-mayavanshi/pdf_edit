@@ -3,7 +3,6 @@ import tempfile
 import zipfile
 import fitz
 import pandas as pd
-import streamlit as st
 
 # --- SET FIXED VALUES HERE ---
 FONT_PATH = "times.ttf"
@@ -62,18 +61,28 @@ def process_xpt(xpt_path, output_path, search_str, replace_str):
 def process_one(data_path, filename, search_str, replace_str, temp_dir):
     ext = os.path.splitext(filename)[1].lower()
     base = os.path.splitext(os.path.basename(filename))[0]
+    original_folder = os.path.dirname(data_path)
     if ext == '.pdf':
-        outpath = os.path.join(temp_dir, f"{base}_replaced.pdf")
-        process_pdf(data_path, outpath, search_str, replace_str)
-        return outpath
+        outname = f"{base}_replaced.pdf"
+        outpath_temp = os.path.join(temp_dir, outname)
+        outpath_same = os.path.join(original_folder, outname)
+        process_pdf(data_path, outpath_temp, search_str, replace_str)
+        process_pdf(data_path, outpath_same, search_str, replace_str)
+        return outpath_temp
     elif ext == '.csv':
-        outpath = os.path.join(temp_dir, f"{base}_replaced.csv")
-        process_csv(data_path, outpath, search_str, replace_str)
-        return outpath
+        outname = f"{base}_replaced.csv"
+        outpath_temp = os.path.join(temp_dir, outname)
+        outpath_same = os.path.join(original_folder, outname)
+        process_csv(data_path, outpath_temp, search_str, replace_str)
+        process_csv(data_path, outpath_same, search_str, replace_str)
+        return outpath_temp
     elif ext == '.xpt':
-        outpath = os.path.join(temp_dir, f"{base}_replaced.xpt")
-        process_xpt(data_path, outpath, search_str, replace_str)
-        return outpath
+        outname = f"{base}_replaced.xpt"
+        outpath_temp = os.path.join(temp_dir, outname)
+        outpath_same = os.path.join(original_folder, outname)
+        process_xpt(data_path, outpath_temp, search_str, replace_str)
+        process_xpt(data_path, outpath_same, search_str, replace_str)
+        return outpath_temp
     else:
         return None
 
@@ -93,6 +102,11 @@ def run_process(search_str, replace_str, file_path):
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zout:
             for f in processed_files:
                 zout.write(f, arcname=os.path.basename(f))
+        # Also save replaced ZIP in same folder as input ZIP
+        original_folder = os.path.dirname(file_path)
+        zip_path_same = os.path.join(original_folder, "replaced_files.zip")
+        with open(zip_path, "rb") as src, open(zip_path_same, "wb") as dst:
+            dst.write(src.read())
         return zip_path, "replaced_files.zip"
     else:
         out = process_one(file_path, filename, search_str, replace_str, temp_dir)
@@ -101,29 +115,20 @@ def run_process(search_str, replace_str, file_path):
         else:
             return None, None
 
-# ---- Streamlit UI ----
-st.title("Bulk Text Replacer (PDF, CSV, XPT, ZIP)")
-st.write("Type the filename (with extension) or path, enter the search and replace strings, and download the processed file.")
+def main():
+    print("Bulk Text Replacer (PDF, CSV, XPT, ZIP)")
+    search_str = input("Enter the text to search for: ")
+    replace_str = input("Enter the text to replace with: ")
+    file_path = input("Enter the filename or path (e.g., sample.pdf, data/test.csv, etc.): ")
 
-search_str = st.text_input("Search for:")
-replace_str = st.text_input("Replace with:")
-file_path = st.text_input("Enter filename or path (e.g., 'sample.pdf', 'data/test.csv', etc.):")
-
-if st.button("Run") and search_str and replace_str and file_path:
-    with st.spinner("Processing..."):
-        if not os.path.exists(file_path):
-            st.error("File does not exist in the given path.")
+    if not os.path.exists(file_path):
+        print("Error: File does not exist in the given path.")
+    else:
+        output_path, output_name = run_process(search_str, replace_str, file_path)
+        if output_path and os.path.exists(output_path):
+            print(f"Done! The file '{output_name}' was saved in the same folder as your original file.")
         else:
-            output_path, output_name = run_process(search_str, replace_str, file_path)
-            if output_path and os.path.exists(output_path):
-                with open(output_path, "rb") as f:
-                    st.success(f"Done! Download your file: {output_name}")
-                    st.download_button(
-                        label=f"Download {output_name}",
-                        data=f,
-                        file_name=output_name
-                    )
-            else:
-                st.error("Processing failed or unsupported file type.")
+            print("Processing failed or unsupported file type.")
 
-st.info("Supported input: PDF, CSV, XPT, or ZIP containing any of these file types. The file should be in the same folder as this app or provide the relative path.")
+if __name__ == '__main__':
+    main()
