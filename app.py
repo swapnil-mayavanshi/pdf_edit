@@ -5,7 +5,6 @@ import fitz
 import pandas as pd
 
 # --- SET FIXED VALUES HERE ---
-FONT_PATH = "times.ttf"
 PREFERRED_SIZE = 11
 EXPAND = 2.5
 Y_SHIFT = 1.5
@@ -26,8 +25,7 @@ def process_pdf(pdf_path, output_path, search_str, replace_str):
             rc = page.insert_textbox(
                 new_rect,
                 replace_str,
-                fontname="TimesNewRomanPSMT",
-                fontfile=FONT_PATH,
+                fontname="helv",   # Use built-in Helvetica font
                 fontsize=PREFERRED_SIZE,
                 color=(0, 0, 0),
                 align=1,
@@ -36,8 +34,7 @@ def process_pdf(pdf_path, output_path, search_str, replace_str):
                 rc = page.insert_textbox(
                     new_rect,
                     replace_str,
-                    fontname="TimesNewRomanPSMT",
-                    fontfile=FONT_PATH,
+                    fontname="helv",
                     fontsize=PREFERRED_SIZE - 1,
                     color=(0, 0, 0),
                     align=1,
