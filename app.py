@@ -4,6 +4,7 @@ import zipfile
 import fitz
 import pandas as pd
 import streamlit as st
+import requests
 
 # --- SET FIXED VALUES HERE ---
 FONT_PATH = "times.ttf"
@@ -102,7 +103,7 @@ def run_process(search_str, replace_str, file_path, filename):
 
 # ---- Streamlit UI ----
 st.title("Bulk Text Replacer (PDF, CSV, XPT, ZIP)")
-st.write("Upload a file, enter the search and replace strings, and download the processed file.")
+st.write("Upload a file or enter a GitHub raw file URL, enter the search and replace strings, and download the processed file.")
 
 search_str = st.text_input("Search for:")
 replace_str = st.text_input("Replace with:")
@@ -111,14 +112,41 @@ uploaded_file = st.file_uploader(
     type=["pdf", "csv", "xpt", "zip"]
 )
 
-if st.button("Run") and uploaded_file and search_str and replace_str:
-    with st.spinner("Processing..."):
-        temp_dir = tempfile.mkdtemp()
-        file_path = os.path.join(temp_dir, uploaded_file.name)
-        with open(file_path, "wb") as f:
-            f.write(uploaded_file.read())
+# --- GITHUB SUPPORT ---
+github_url = st.text_input("Or enter a GitHub **raw** file URL (e.g., https://raw.githubusercontent.com/...)")
+use_github_file = github_url.strip() != ""
+github_filename = ""
+github_temp_path = ""
+if use_github_file:
+    github_filename = github_url.split("/")[-1]
+    temp_dir = tempfile.mkdtemp()
+    github_temp_path = os.path.join(temp_dir, github_filename)
+    try:
+        r = requests.get(github_url)
+        if r.status_code == 200:
+            with open(github_temp_path, "wb") as f:
+                f.write(r.content)
+        else:
+            st.error("Failed to fetch the file from GitHub. Please check the URL.")
+            use_github_file = False
+    except Exception as e:
+        st.error(f"Error fetching file: {e}")
+        use_github_file = False
+# --- END GITHUB SUPPORT ---
 
-        output_path, output_name = run_process(search_str, replace_str, file_path, uploaded_file.name)
+if st.button("Run") and search_str and replace_str and (uploaded_file or use_github_file):
+    with st.spinner("Processing..."):
+        if use_github_file:
+            file_path = github_temp_path
+            file_name = github_filename
+        else:
+            temp_dir = tempfile.mkdtemp()
+            file_path = os.path.join(temp_dir, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.read())
+            file_name = uploaded_file.name
+
+        output_path, output_name = run_process(search_str, replace_str, file_path, file_name)
         if output_path and os.path.exists(output_path):
             with open(output_path, "rb") as f:
                 st.success(f"Done! Download your file: {output_name}")
@@ -130,5 +158,4 @@ if st.button("Run") and uploaded_file and search_str and replace_str:
         else:
             st.error("Processing failed or unsupported file type.")
 
-st.info("Supported input: PDF, CSV, XPT, or ZIP containing any of these file types.")
-
+st.info("Supported input: PDF, CSV, XPT, or ZIP containing any of these file types. You can also use a direct GitHub raw file URL.")
