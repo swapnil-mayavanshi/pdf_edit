@@ -3,6 +3,8 @@ import tempfile
 import zipfile
 import fitz
 import pandas as pd
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
 # --- SET FIXED VALUES HERE ---
 FONT_PATH = "times.ttf"
@@ -76,14 +78,9 @@ def process_one(data_path, filename, search_str, replace_str, temp_dir):
     else:
         return None
 
-def main():
-    search_str = input("Enter the word to search for: ")
-    replace_str = input("Enter the word to replace with: ")
-    file_path = input("Enter the file path (PDF, CSV, or XPT, or ZIP of those): ").strip()
-
+def run_process(search_str, replace_str, file_path):
     temp_dir = tempfile.mkdtemp()
     processed_files = []
-
     file_ext = os.path.splitext(file_path)[1].lower()
     if file_ext == '.zip':
         with zipfile.ZipFile(file_path, 'r') as zin:
@@ -96,13 +93,59 @@ def main():
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zout:
             for f in processed_files:
                 zout.write(f, arcname=os.path.basename(f))
-        print(f"Processed files zipped at: {zip_path}")
+        return zip_path
     else:
         out = process_one(file_path, os.path.basename(file_path), search_str, replace_str, temp_dir)
         if out:
-            print(f"Processed file at: {out}")
+            return out
         else:
-            print("Unsupported file type.")
+            return None
+
+def browse_file(entry):
+    filepath = filedialog.askopenfilename(filetypes=[
+        ("Supported", "*.pdf *.csv *.xpt *.zip"),
+        ("PDF files", "*.pdf"),
+        ("CSV files", "*.csv"),
+        ("SAS XPT files", "*.xpt"),
+        ("ZIP files", "*.zip"),
+        ("All files", "*.*")
+    ])
+    entry.delete(0, tk.END)
+    entry.insert(0, filepath)
+
+def on_run(search_entry, replace_entry, file_entry):
+    search_str = search_entry.get()
+    replace_str = replace_entry.get()
+    file_path = file_entry.get()
+    if not (search_str and replace_str and file_path):
+        messagebox.showwarning("Missing Data", "Please fill in all fields and select a file.")
+        return
+    output_path = run_process(search_str, replace_str, file_path)
+    if output_path:
+        messagebox.showinfo("Done", f"File processed:\n{output_path}")
+    else:
+        messagebox.showerror("Error", "Processing failed or unsupported file type.")
+
+def main():
+    root = tk.Tk()
+    root.title("Bulk Text Replacer (PDF, CSV, XPT, ZIP)")
+
+    tk.Label(root, text="Search for:").grid(row=0, column=0, sticky="e")
+    search_entry = tk.Entry(root, width=30)
+    search_entry.grid(row=0, column=1, padx=5, pady=5)
+
+    tk.Label(root, text="Replace with:").grid(row=1, column=0, sticky="e")
+    replace_entry = tk.Entry(root, width=30)
+    replace_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    tk.Label(root, text="Select file:").grid(row=2, column=0, sticky="e")
+    file_entry = tk.Entry(root, width=30)
+    file_entry.grid(row=2, column=1, padx=5, pady=5)
+    tk.Button(root, text="Browse...", command=lambda: browse_file(file_entry)).grid(row=2, column=2, padx=5, pady=5)
+
+    tk.Button(root, text="Run", command=lambda: on_run(search_entry, replace_entry, file_entry)).grid(row=3, column=1, pady=10)
+
+    root.mainloop()
 
 if __name__ == '__main__':
     main()
