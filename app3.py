@@ -4,7 +4,16 @@ import zipfile
 from flask import Flask, render_template, request, send_file
 import fitz
 import pandas as pd
+from flask import Flask
+from flask import render_template_string
 
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return render_template_string("<h1>Hello, Flask is running on Replit!</h1>")
+
+app.run(host='0.0.0.0', port=81)
 app = Flask(__name__)
 UPLOAD_FOLDER = tempfile.gettempdir()
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -118,3 +127,4 @@ def index():
 
 if __name__ == '__main__':
     app.run(debug=True)
+
